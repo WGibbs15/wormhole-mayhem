@@ -51,7 +51,6 @@ fn hdl_governance(storage: &mut TokenBridge, vaa: state::ParsedVAA) {
     env::panic_str("governance not implemented");
 }
 
-
 #[near_bindgen]
 impl TokenBridge {
     pub fn submit_vaa(&mut self, vaa: String) -> Promise {
@@ -64,14 +63,16 @@ impl TokenBridge {
         .then(ext_self::submit_vaa_callback(
             env::current_account_id(), // me
             0,                         // yocto NEAR to attach to the callback
-            Gas(100_000_000_000_000), // gas to attach
+            Gas(100_000_000_000_000),  // gas to attach
         ))
     }
 
     #[private] // So, all of wormhole security rests in this one statement?
     pub fn submit_vaa_callback(&mut self) {
         // well, and this one...
-        if (env::promise_results_count() != 1) || (env::predecessor_account_id() != env::current_account_id()) {
+        if (env::promise_results_count() != 1)
+            || (env::predecessor_account_id() != env::current_account_id())
+        {
             env::panic_str("BadPredecessorAccount");
         }
 
@@ -83,7 +84,7 @@ impl TokenBridge {
             _ => env::panic_str("vaaVerifyFail"),
         }
 
-        let v : Value = near_sdk::serde_json::from_str(&data).unwrap();
+        let v: Value = near_sdk::serde_json::from_str(&data).unwrap();
 
         // Please, what is the correct way of just getting a fricken string?!
         let _vaa = v[0].to_string();
@@ -115,6 +116,14 @@ impl TokenBridge {
                 env::panic_str("InvalidGovernanceSet");
             }
 
+            if (CHAIN_ID_SOL != vaa.emitter_chain)
+                || (hex::decode("0000000000000000000000000000000000000000000000000000000000000004")
+                    .unwrap()
+                    != vaa.emitter_address)
+            {
+                env::panic_str("InvalidGovernanceEmitter");
+            }
+
             hdl_governance(self, vaa);
             return;
         }
@@ -122,7 +131,7 @@ impl TokenBridge {
         env::log_str("looking good");
     }
 
-    pub fn boot_token_bridge(&mut self, core: String) {
+    pub fn boot_portal(&mut self, core: String) {
         if self.booted {
             env::panic_str("no donut");
         }
