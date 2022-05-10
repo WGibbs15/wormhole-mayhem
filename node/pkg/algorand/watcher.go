@@ -82,9 +82,14 @@ func NewWatcher(
 }
 
 func lookAtTxn(e *Watcher, t types.SignedTxnInBlock, b types.Block, logger *zap.Logger) {
+	logger.Info(fmt.Sprintf("lookAtTxn %d", len(t.EvalDelta.InnerTxns)))
+
+
 	for q := 0; q < len(t.EvalDelta.InnerTxns); q++ {
 		var it = t.EvalDelta.InnerTxns[q]
 		var at = it.Txn
+
+		logger.Info("hi mom")
 
 		if (len(at.ApplicationArgs) != 3) || (uint64(at.ApplicationID) != e.appid) {
 			continue
@@ -203,10 +208,12 @@ func (e *Watcher) Run(ctx context.Context) error {
 			}
 
 			e.next_round = status.NextVersionRound
-			logger.Info(fmt.Sprintf("Algorand next_round set to %d", e.next_round))
 		}
 
+
 		for {
+			logger.Info(fmt.Sprintf("Algorand next_round set to %d", e.next_round))
+
 			select {
 			case <-ctx.Done():
 				return
@@ -256,6 +263,8 @@ func (e *Watcher) Run(ctx context.Context) error {
 						errC <- err
 						return
 					}
+
+					logger.Info(fmt.Sprintf("Inspecting round %d", e.next_round))
 
 					for _, element := range block.Payset {
 						lookAtTxn(e, element, block, logger)
