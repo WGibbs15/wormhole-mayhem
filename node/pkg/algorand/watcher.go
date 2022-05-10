@@ -251,7 +251,7 @@ func (e *Watcher) Run(ctx context.Context) error {
 						if strings.Contains(err.Error(), "ledger does not have entry") {
 							break
 						}
-						logger.Error("algodClient.Block", zap.Error(err))
+						logger.Error(fmt.Sprintf("algodClient.Block %d: %s", e.next_round, zap.Error(err)))
 						p2p.DefaultRegistry.AddErrorCount(vaa.ChainIDAlgorand, 1)
 						errC <- err
 						return
