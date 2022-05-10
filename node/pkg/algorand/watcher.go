@@ -21,6 +21,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"go.uber.org/zap"
+	"strings"
 	"time"
 )
 
@@ -169,7 +170,8 @@ func (e *Watcher) Run(ctx context.Context) error {
 	logger := supervisor.Logger(ctx)
 	errC := make(chan error)
 
-	logger.Info("Algorand watcher connecting", zap.String("url", e.indexerRPC))
+	logger.Info("Algorand watcher connecting to indexer  ", zap.String("url", e.indexerRPC))
+	logger.Info("Algorand watcher connecting to RPC node ", zap.String("url", e.algodRPC))
 
 	go func() {
 		timer := time.NewTicker(time.Second * 1)
@@ -244,15 +246,16 @@ func (e *Watcher) Run(ctx context.Context) error {
 			case <-timer.C:
 
 				for {
-					_, err := algodClient.StatusAfterBlock(e.next_round).Do(context.Background())
-					if err != nil {
-						logger.Error("StatusAfterBlock", zap.Error(err))
+					block, err := algodClient.Block(e.next_round).Do(context.Background())
+					if (err != nil) || (block.Round == 0) {
+						if strings.Contains(err.Error(), "ledger does not have entry") {
+							break
+						}
+						logger.Error("algodClient.Block", zap.Error(err))
 						p2p.DefaultRegistry.AddErrorCount(vaa.ChainIDAlgorand, 1)
 						errC <- err
 						return
 					}
-
-					block, err := algodClient.Block(e.next_round).Do(context.Background())
 
 					for _, element := range block.Payset {
 						lookAtTxn(e, element, block, logger)
